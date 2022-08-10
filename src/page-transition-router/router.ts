@@ -4,7 +4,6 @@ import { state } from "./util";
 type RouteChangeHandler = (newRoute: string, prevRoute: string) => void;
 
 interface RouterConfig {
-  onRouteChange?: RouteChangeHandler;
   onLoadRoute?: (target: string) => void;
   onUnloadRoute?: (target: string) => void;
 }
@@ -50,7 +49,6 @@ function interceptLinkClick({ onClick = (link: string) => {} }) {
 
   // if not, then load it after the document is loaded
   window.addEventListener("DOMContentLoaded", () => {
-    console.log("initial link grabbed");
     links.set(grabAllLinks());
   });
 
@@ -83,7 +81,7 @@ async function loadHTML(routeString: string) {
  * @returns
  */
 export function createRouter(routerConfig: RouterConfig): Router {
-  const { onRouteChange, onLoadRoute, onUnloadRoute } = routerConfig;
+  const { onLoadRoute, onUnloadRoute } = routerConfig;
   const route = state("");
   const isRouteLoaded = state(false);
   const { refreshLinkIntercepts } = interceptLinkClick({
@@ -104,13 +102,15 @@ export function createRouter(routerConfig: RouterConfig): Router {
     swapBody(bodyHtml);
     isRouteLoaded.set(true);
 
-    onRouteChange?.(newRoute, prevRoute);
+    // onRouteChange?.(newRoute, prevRoute);
   });
 
   isRouteLoaded.onChange(() => {
     if (isRouteLoaded.value === true) {
-      // handle loaded
+      // successfully landed the new page
       refreshLinkIntercepts();
+      // scrol to top
+      window.scrollTo(0, 0);
       onLoadRoute?.(route.value);
       return;
     }
