@@ -1,0 +1,21 @@
+{
+  "name": "page-transition",
+  "version": "1.0.0",
+  "description": "Simple page transition tool that embraces vanilla javascript for your interactive site project.",
+  "scripts": {
+    "start": "parcel src/index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvinleung/page-transition.git"
+  },
+  "author": "Alvin Leung",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alvinleung/page-transition/issues"
+  },
+  "homepage": "https://github.com/alvinleung/page-transition#readme",
+  "dependencies": {
+    "parcel": "^2.7.0"
+  }
+}
