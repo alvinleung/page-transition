@@ -93,6 +93,7 @@ export function createRouter(routerConfig: RouterConfig): Router {
   });
 
   route.onChange(async (newRoute, prevRoute) => {
+    console.log(`Changing to ${newRoute}`);
     isRouteLoaded.set(false);
 
     const entirePageHTML = (await loadHTML(newRoute)) as string;
