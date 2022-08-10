@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Simple page transition tool that embraces vanilla javascript for your interactive site project.",
   "scripts": {
-    "start": "parcel src/index.html"
+    "start": "parcel src/index.html",
+    "build": "parcel build src/index.html & parcel build src/app.ts"
   },
   "repository": {
     "type": "git",
