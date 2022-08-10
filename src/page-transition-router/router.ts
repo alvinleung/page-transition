@@ -88,7 +88,8 @@ export function createRouter(routerConfig: RouterConfig): Router {
   const isRouteLoaded = state(false);
   const { refreshLinkIntercepts } = interceptLinkClick({
     onClick: (href) => {
-      navigateTo(href);
+      const target = href ? href : "/";
+      navigateTo(target);
     },
   });
 
