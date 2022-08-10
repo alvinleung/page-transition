@@ -100,8 +100,6 @@ export function createRouter(routerConfig: RouterConfig): Router {
       entirePageHTML
     )?.[1] as string;
 
-    console.log(bodyHtml);
-
     // update the document
     swapBody(bodyHtml);
     isRouteLoaded.set(true);
