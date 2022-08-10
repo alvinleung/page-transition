@@ -1,11 +1,12 @@
-import { createRouter } from "./page-transition-router/router";
+import { createRouter, Router } from "./page-transition-router/router";
 
+// exposing the router object
 //@ts-ignore
 window.router = createRouter({
-  onRouteChange: (newRoute) => {
-    // console.log("Changing to route " + newRoute);
-  },
   onLoadRoute: () => {
     // console.log("document loaded");
   },
 });
+
+//@ts-ignore
+const router: Router = window.router as Router;

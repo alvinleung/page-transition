@@ -8,8 +8,10 @@ interface RouterConfig {
   onUnloadRoute?: (target: string) => void;
 }
 
-interface Router {
+export interface Router {
   navigateTo: (newRoute: string) => void;
+  observeRouteChange: (routeChangeHandler: RouteChangeHandler) => void;
+  unobserveRouteChange: (routeChangeHandler: RouteChangeHandler) => void;
   useScript: (script: () => () => void) => void;
   cleanup: () => void;
 }
@@ -150,6 +152,10 @@ export function createRouter(routerConfig: RouterConfig): Router {
   return {
     navigateTo: navigateTo,
     useScript: useScript,
+    observeRouteChange: (callback: RouteChangeHandler) =>
+      route.onChange(callback),
+    unobserveRouteChange: (callback: RouteChangeHandler) =>
+      route.unobserveChange(callback),
     cleanup: cleanup,
   };
 }
