@@ -146,7 +146,7 @@ export function createRouter(routerConfig: RouterConfig): Router {
     // auto detect script load
     const cleanup = script();
     route.onChange(() => {
-      cleanup();
+      cleanup && cleanup();
       route.unobserveChange(this);
     });
   }
