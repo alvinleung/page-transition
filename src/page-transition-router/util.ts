@@ -129,7 +129,7 @@ export function state<T>(initial: T): State<T> {
     },
     unobserveChange: (callback: StateChangeCallback<T>) => {
       const removeIndex = allCallbacks.indexOf(callback);
-      allCallbacks.splice(removeIndex);
+      allCallbacks.splice(removeIndex, 1);
     },
   };
 
