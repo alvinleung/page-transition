@@ -89,7 +89,7 @@ function swapBody(newBodyString: string) {
 
       // check if script only execute once
       const src = oldScript.attributes.getNamedItem("src")?.value as string;
-      if (blockExecution(src)) {
+      if (src !== undefined && blockExecution(src)) {
         return;
       }
 
