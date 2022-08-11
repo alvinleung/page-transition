@@ -116,32 +116,20 @@ function swapBody(newBodyString: string) {
 }
 
 type PageScript = () => () => void;
-interface PageScriptEntry {
-  script: PageScript;
-  cleanup: Function | null;
-}
 function createPageScriptExecutor() {
-  let pageScripts: PageScriptEntry[] = [];
+  let pageScriptsCleanups: (() => void)[] = [];
 
-  function addPageScript(script: PageScript) {
-    pageScripts.push({
-      cleanup: null,
-      script: script,
-    });
+  function executeScript(script: PageScript) {
+    const cleanup = script();
+    pageScriptsCleanups.push(cleanup);
   }
-  function execuatePageScriptCleanups() {
-    pageScripts.forEach((pageScripts) => {
-      pageScripts.cleanup = pageScripts.script();
+  function cleanupExecutedScript() {
+    pageScriptsCleanups.forEach((cleanup) => {
+      cleanup();
     });
-  }
-  function execuatePageScripts() {
-    pageScripts.forEach((pageScripts) => {
-      pageScripts.cleanup && pageScripts.cleanup();
-    });
-    pageScripts = [];
   }
 
-  return { execuatePageScripts, execuatePageScriptCleanups, addPageScript };
+  return { executeScript, cleanupExecutedScript };
 }
 
 /**
@@ -160,15 +148,14 @@ export function createRouter(routerConfig: RouterConfig): Router {
     },
   });
 
-  const { execuatePageScripts, execuatePageScriptCleanups, addPageScript } =
-    createPageScriptExecutor();
+  const { executeScript, cleanupExecutedScript } = createPageScriptExecutor();
 
   // initial execution
-  window.addEventListener("load", execuatePageScripts);
+  // window.addEventListener("load", execuatePageScripts);
 
   route.onChange(async (newRoute, prevRoute) => {
     // call exit page
-    execuatePageScriptCleanups();
+    cleanupExecutedScript();
 
     console.log(`Changing to ${newRoute}`);
     isRouteLoaded.set(false);
@@ -181,22 +168,12 @@ export function createRouter(routerConfig: RouterConfig): Router {
     // update the document
     swapBody(bodyHtml);
     isRouteLoaded.set(true);
-
-    execuatePageScripts();
     // onRouteChange?.(newRoute, prevRoute);
   });
 
   function useScript(script: () => () => void) {
-    addPageScript(script);
-
-    // auto detect script load
-    // const cleanup = script();
-
-    // const handleRouteChange = () => {
-    //   cleanup && cleanup();
-    //   route.unobserveChange(handleRouteChange);
-    // };
-    // route.onChange(handleRouteChange);
+    // execute script when loaded
+    executeScript(script);
   }
 
   isRouteLoaded.onChange(() => {
