@@ -78,40 +78,69 @@ async function loadHTML(routeString: string) {
 }
 
 function swapBody(newBodyString: string) {
+  // use .persist class to tag elements that are needed to persist
+  const elmsToRemove = document.body.querySelectorAll("body > *:not(.persist)");
+  elmsToRemove.forEach((elm) => elm.remove());
+
   const setInnerHTMLWithScript = function (
     elm: HTMLElement,
     html: string,
     blockExecution = (src: string) => false
   ) {
-    elm.innerHTML = html;
-    Array.from(elm.querySelectorAll("script")).forEach((oldScript) => {
-      // check if script only execute once
-      const src = oldScript.attributes.getNamedItem("src")?.value as string;
-      if (src !== undefined && blockExecution(src)) {
+    // elm.innerHTML = html;
+
+    const dummyContainer = document.createElement("div");
+    dummyContainer.innerHTML = html;
+
+    // Array.from(dummyContainer.querySelectorAll("script")).forEach(
+    //   (oldScript) => {
+    //     // check if script only execute once
+    //     const src = oldScript.attributes.getNamedItem("src")?.value as string;
+    //     if (src !== undefined && blockExecution(src)) {
+    //       return;
+    //     }
+
+    //     const newScript = document.createElement("script");
+    //     Array.from(oldScript.attributes).forEach((attr) => {
+    //       // prevent executing the current one
+    //       newScript.setAttribute(attr.name, attr.value);
+    //     });
+    //     newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+    //     oldScript.parentNode?.replaceChild(newScript, oldScript);
+    //   }
+    // );
+
+    // add all elements from old html to new
+    Array.from(dummyContainer.children).forEach((elm) => {
+      if (elm.tagName === "SCRIPT") {
+        const src = elm.attributes.getNamedItem("src")?.value as string;
+        if (src !== undefined && blockExecution(src)) {
+          return;
+        }
+
+        const newScript = document.createElement("script");
+        Array.from(elm.attributes).forEach((attr) => {
+          // prevent executing the current one
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        newScript.appendChild(document.createTextNode(elm.innerHTML));
+        elm.appendChild(newScript);
         return;
       }
 
-      const newScript = document.createElement("script");
-      Array.from(oldScript.attributes).forEach((attr) => {
-        // prevent executing the current one
-        newScript.setAttribute(attr.name, attr.value);
-      });
-      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-      oldScript.parentNode?.replaceChild(newScript, oldScript);
+      const clone = elm.cloneNode();
+      elm.appendChild(clone);
     });
   };
 
-  /**
-   * blow webflow and jquery
-   * @param src
-   * @returns
-   */
   const blockJQueryAndWebflow = (src: string) => {
     if (src.includes("webflow") || src.includes("jquery")) {
       return true;
     }
     return false;
   };
+
+  // add the persistent element
   setInnerHTMLWithScript(document.body, newBodyString, blockJQueryAndWebflow);
 }
 
