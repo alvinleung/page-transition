@@ -119,6 +119,7 @@ function swapBody(newBodyString: string) {
         idLookup[persistId] = elm;
       });
     })();
+    console.log(persistentElmIdsLookup);
 
     const dummyContainer = document.createElement("div");
     dummyContainer.innerHTML = html;
