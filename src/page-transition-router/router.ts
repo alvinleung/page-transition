@@ -9,9 +9,14 @@ interface RouterConfig {
 }
 
 export interface Router {
+  getCurrentRoute: () => string;
   navigateTo: (newRoute: string) => void;
   observeRouteChange: (routeChangeHandler: RouteChangeHandler) => void;
   unobserveRouteChange: (routeChangeHandler: RouteChangeHandler) => void;
+  observePageLoad: (callback: Function) => void;
+  unobservePageLoad: (callback: Function) => void;
+  observePageUnload: (callback: Function) => void;
+  unobservePageUnload: (callback: Function) => void;
   useScript: (script: () => () => void) => void;
   cleanup: () => void;
 }
@@ -207,6 +212,10 @@ export function createRouter(routerConfig: RouterConfig): Router {
     executeScript(script);
   }
 
+  const [observePageLoad, unobservePageLoad, firePageLoad] = createObserver();
+  const [observePageUnload, unobservePageUnload, firePageUnload] =
+    createObserver();
+
   isRouteLoaded.onChange(() => {
     if (isRouteLoaded.value === true) {
       // successfully landed the new page
@@ -214,10 +223,12 @@ export function createRouter(routerConfig: RouterConfig): Router {
       // scrol to top
       window.scrollTo(0, 0);
       onLoadRoute?.(route.value);
+      firePageLoad();
       return;
     }
 
     onUnloadRoute?.(route.value);
+    firePageUnload();
   });
 
   function navigateTo(newRoute: string) {
@@ -243,6 +254,30 @@ export function createRouter(routerConfig: RouterConfig): Router {
       route.onChange(callback),
     unobserveRouteChange: (callback: RouteChangeHandler) =>
       route.unobserveChange(callback),
+    observePageLoad: observePageLoad,
+    unobservePageLoad: unobservePageLoad,
+    observePageUnload: observePageUnload,
+    unobservePageUnload: unobservePageUnload,
     cleanup: cleanup,
+    getCurrentRoute: () => route.value,
   };
+}
+
+function createObserver(): [
+  (callback: Function) => void,
+  (callback: Function) => void,
+  () => void
+] {
+  const callbacks: Function[] = [];
+  const observe = (callback: Function) => {
+    callbacks.push(callback);
+  };
+  const unobserve = (callback: Function) => {
+    const removeIndex = callbacks.indexOf(callback);
+    removeIndex !== -1 && callbacks.splice(removeIndex);
+  };
+  function fire() {
+    callbacks.forEach((callback) => callback());
+  }
+  return [observe, unobserve, fire];
 }
