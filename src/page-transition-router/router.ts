@@ -179,12 +179,14 @@ export function createRouter(routerConfig: RouterConfig): Router {
   function useScript(script: () => () => void) {
     // auto detect script load
     const cleanup = script();
-    route.onChange(() => {
+
+    const handleRouteChange = () => {
       console.log("run cleanup");
       console.log(cleanup);
       cleanup && cleanup();
-      route.unobserveChange(this);
-    });
+      route.unobserveChange(handleRouteChange);
+    };
+    route.onChange(handleRouteChange);
   }
 
   return {
