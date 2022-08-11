@@ -184,7 +184,7 @@ export function createRouter(routerConfig: RouterConfig): Router {
       console.log("run cleanup");
       console.log(route.value);
       cleanup && cleanup();
-      // route.unobserveChange(handleRouteChange);
+      route.unobserveChange(handleRouteChange);
     };
     route.onChange(handleRouteChange);
   }
