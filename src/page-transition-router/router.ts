@@ -182,7 +182,7 @@ export function createRouter(routerConfig: RouterConfig): Router {
 
     const handleRouteChange = () => {
       console.log("run cleanup");
-      console.log(cleanup);
+      console.log(route.value);
       cleanup && cleanup();
       route.unobserveChange(handleRouteChange);
     };
