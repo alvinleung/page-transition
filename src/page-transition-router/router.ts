@@ -128,7 +128,7 @@ function swapBody(newBodyString: string) {
         return;
       }
 
-      const clone = elm.cloneNode();
+      const clone = elm.cloneNode(true);
       baseElement.appendChild(clone);
     });
   };
