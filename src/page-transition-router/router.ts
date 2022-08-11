@@ -125,7 +125,7 @@ function createPageScriptExecutor() {
   }
   function cleanupExecutedScript() {
     pageScriptsCleanups.forEach((cleanup) => {
-      cleanup();
+      cleanup && cleanup();
     });
   }
 
