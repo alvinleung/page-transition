@@ -85,6 +85,8 @@ function swapBody(newBodyString: string) {
   ) {
     elm.innerHTML = html;
     Array.from(elm.querySelectorAll("script")).forEach((oldScript) => {
+      console.log(oldScript);
+
       // check if script only execute once
       const src = oldScript.attributes.getNamedItem("src")?.value as string;
       if (blockExecution(src)) {
