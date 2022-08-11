@@ -114,12 +114,12 @@ function swapBody(newBodyString: string) {
   ) {
     const persistentElmIdsLookup = (() => {
       const idLookup = {};
+      console.log(persistentElms);
       Array.from(persistentElms).forEach((elm) => {
         const persistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
         idLookup[persistId] = elm;
       });
     })();
-    console.log(persistentElmIdsLookup);
 
     const dummyContainer = document.createElement("div");
     dummyContainer.innerHTML = html;
