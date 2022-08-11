@@ -83,7 +83,7 @@ function swapBody(newBodyString: string) {
   elmsToRemove.forEach((elm) => elm.remove());
 
   const setInnerHTMLWithScript = function (
-    elm: HTMLElement,
+    baseElement: HTMLElement,
     html: string,
     blockExecution = (src: string) => false
   ) {
@@ -124,12 +124,12 @@ function swapBody(newBodyString: string) {
           newScript.setAttribute(attr.name, attr.value);
         });
         newScript.appendChild(document.createTextNode(elm.innerHTML));
-        elm.appendChild(newScript);
+        baseElement.appendChild(newScript);
         return;
       }
 
       const clone = elm.cloneNode();
-      elm.appendChild(clone);
+      baseElement.appendChild(clone);
     });
   };
 
