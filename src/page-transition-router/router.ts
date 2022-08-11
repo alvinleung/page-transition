@@ -163,6 +163,9 @@ export function createRouter(routerConfig: RouterConfig): Router {
   const { execuatePageScripts, execuatePageScriptCleanups, addPageScript } =
     createPageScriptExecutor();
 
+  // initial execution
+  window.addEventListener("load", execuatePageScripts);
+
   route.onChange(async (newRoute, prevRoute) => {
     // call exit page
     execuatePageScriptCleanups();
