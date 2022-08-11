@@ -77,6 +77,44 @@ async function loadHTML(routeString: string) {
   return await loadPageAndCache(target);
 }
 
+function swapBody(newBodyString: string) {
+  const setInnerHTMLWithScript = function (
+    elm: HTMLElement,
+    html: string,
+    blockExecution = (src: string) => false
+  ) {
+    elm.innerHTML = html;
+    Array.from(elm.querySelectorAll("script")).forEach((oldScript) => {
+      // check if script only execute once
+      const src = oldScript.attributes.getNamedItem("src")?.value as string;
+      if (blockExecution(src)) {
+        return;
+      }
+
+      const newScript = document.createElement("script");
+      Array.from(oldScript.attributes).forEach((attr) => {
+        // prevent executing the current one
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+      oldScript.parentNode?.replaceChild(newScript, oldScript);
+    });
+  };
+
+  /**
+   * blow webflow and jquery
+   * @param src
+   * @returns
+   */
+  const blockJQueryAndWebflow = (src: string) => {
+    if (src.includes("webflow") || src.includes("jquery")) {
+      return true;
+    }
+    return false;
+  };
+  setInnerHTMLWithScript(document.body, newBodyString, blockJQueryAndWebflow);
+}
+
 /**
  * RouterConfig
  * @param routerConfig
@@ -121,21 +159,6 @@ export function createRouter(routerConfig: RouterConfig): Router {
 
     onUnloadRoute?.(route.value);
   });
-
-  function swapBody(newBodyString: string) {
-    const setInnerHTMLWithScript = function (elm: HTMLElement, html: string) {
-      elm.innerHTML = html;
-      Array.from(elm.querySelectorAll("script")).forEach((oldScript) => {
-        const newScript = document.createElement("script");
-        Array.from(oldScript.attributes).forEach((attr) =>
-          newScript.setAttribute(attr.name, attr.value)
-        );
-        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-        oldScript.parentNode?.replaceChild(newScript, oldScript);
-      });
-    };
-    setInnerHTMLWithScript(document.body, newBodyString);
-  }
 
   function navigateTo(newRoute: string) {
     // save route to browser state
