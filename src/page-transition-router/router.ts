@@ -83,9 +83,8 @@ async function loadHTML(routeString: string) {
 }
 
 function swapBody(newBodyString: string) {
-  // use .persist class to tag elements that are needed to persist
-  const elmsToRemove = document.body.querySelectorAll("body > *:not(.persist)");
-  elmsToRemove.forEach((elm) => elm.remove());
+  // attribute name of the "persist-id" to tag persistent element
+  const ATTR_PERSIST_ID = "persist-id";
 
   const appendScript = (
     baseElement: HTMLElement,
@@ -110,13 +109,29 @@ function swapBody(newBodyString: string) {
   const appendNewContent = function (
     baseElement: HTMLElement,
     html: string,
-    blockExecution = (src: string) => false
+    blockExecution = (src: string) => false,
+    persistentElms: HTMLCollection
   ) {
+    const persistentElmIdsLookup = (() => {
+      const idLookup = {};
+      Array.from(persistentElms).forEach((elm) => {
+        const persistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
+        idLookup[persistId] = elm;
+      });
+    })();
+
     const dummyContainer = document.createElement("div");
     dummyContainer.innerHTML = html;
 
     // add all elements from old html to new
     Array.from(dummyContainer.children).forEach((elm) => {
+      if (elm.hasAttribute(ATTR_PERSIST_ID)) {
+        // do not replace when the new element already exist on dom
+        const elmPersistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
+        const existOnCurrentDOM = persistentElmIdsLookup[elmPersistId];
+        if (existOnCurrentDOM) return;
+      }
+
       if (elm.tagName === "SCRIPT") {
         appendScript(baseElement, elm as HTMLScriptElement, blockExecution);
         return;
@@ -134,8 +149,19 @@ function swapBody(newBodyString: string) {
     return false;
   };
 
-  // add the persistent element
-  appendNewContent(document.body, newBodyString, blockJQueryAndWebflow);
+  // use persist-id attribute to tag elements
+  // that are needed to persist across pages
+  const elmsToRemove = document.body.querySelectorAll(
+    `body > *:not([${ATTR_PERSIST_ID}])`
+  );
+  elmsToRemove.forEach((elm) => elm.remove());
+  const persistentElms = document.body.children;
+  appendNewContent(
+    document.body,
+    newBodyString,
+    blockJQueryAndWebflow,
+    persistentElms
+  );
 }
 
 type PageScript = () => () => void;
