@@ -115,6 +115,35 @@ function swapBody(newBodyString: string) {
   setInnerHTMLWithScript(document.body, newBodyString, blockJQueryAndWebflow);
 }
 
+type PageScript = () => () => void;
+interface PageScriptEntry {
+  script: PageScript;
+  cleanup: Function | null;
+}
+function createPageScriptExecutor() {
+  let pageScripts: PageScriptEntry[] = [];
+
+  function addPageScript(script: PageScript) {
+    pageScripts.push({
+      cleanup: null,
+      script: script,
+    });
+  }
+  function execuatePageScriptCleanups() {
+    pageScripts.forEach((pageScripts) => {
+      pageScripts.cleanup = pageScripts.script();
+    });
+  }
+  function execuatePageScripts() {
+    pageScripts.forEach((pageScripts) => {
+      pageScripts.cleanup && pageScripts.cleanup();
+    });
+    pageScripts = [];
+  }
+
+  return { execuatePageScripts, execuatePageScriptCleanups, addPageScript };
+}
+
 /**
  * RouterConfig
  * @param routerConfig
@@ -131,7 +160,13 @@ export function createRouter(routerConfig: RouterConfig): Router {
     },
   });
 
+  const { execuatePageScripts, execuatePageScriptCleanups, addPageScript } =
+    createPageScriptExecutor();
+
   route.onChange(async (newRoute, prevRoute) => {
+    // call exit page
+    execuatePageScriptCleanups();
+
     console.log(`Changing to ${newRoute}`);
     isRouteLoaded.set(false);
 
@@ -144,8 +179,22 @@ export function createRouter(routerConfig: RouterConfig): Router {
     swapBody(bodyHtml);
     isRouteLoaded.set(true);
 
+    execuatePageScripts();
     // onRouteChange?.(newRoute, prevRoute);
   });
+
+  function useScript(script: () => () => void) {
+    addPageScript(script);
+
+    // auto detect script load
+    // const cleanup = script();
+
+    // const handleRouteChange = () => {
+    //   cleanup && cleanup();
+    //   route.unobserveChange(handleRouteChange);
+    // };
+    // route.onChange(handleRouteChange);
+  }
 
   isRouteLoaded.onChange(() => {
     if (isRouteLoaded.value === true) {
@@ -174,17 +223,6 @@ export function createRouter(routerConfig: RouterConfig): Router {
 
   function cleanup() {
     window.removeEventListener("popstate", handlePageBack);
-  }
-
-  function useScript(script: () => () => void) {
-    // auto detect script load
-    const cleanup = script();
-
-    const handleRouteChange = () => {
-      cleanup && cleanup();
-      route.unobserveChange(handleRouteChange);
-    };
-    route.onChange(handleRouteChange);
   }
 
   return {
