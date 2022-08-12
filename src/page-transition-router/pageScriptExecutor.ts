@@ -1,22 +1,20 @@
 import { State } from "./util";
 
-interface ExitTransition {
+type FinishTransition = () => void;
+
+interface ExitState {
   nextPath: string;
-  beginExitTransition: () => void;
-  endExitTransition: () => void;
-  onExitTransitionDone: (handler: (aborted: boolean) => void) => void;
+  beginTransition: () => {
+    finish: FinishTransition;
+    onAbort: (handler: () => void) => void;
+  };
+  // onAbortTransition: (handler: () => void) => void;
 }
 export type PageScript = (
   fromRoute?: string
-) => (exitTransition: ExitTransition) => void;
+) => (exitTransition: ExitState) => void;
 export function createPageScriptExecutor(route: State<string>) {
-  let pageScriptsCleanups: ((transition: ExitTransition) => void)[] = [];
-
-  // CLEANUP STATES
-  let _isPerformingCleanup = false;
-  function isPerformingCleanup() {
-    return _isPerformingCleanup;
-  }
+  let pageScriptsCleanups: ((transition: ExitState) => void)[] = [];
 
   /**
    * Declare and execute a page script
@@ -49,34 +47,36 @@ export function createPageScriptExecutor(route: State<string>) {
         (cleanup) =>
           new Promise<boolean>((resolve, reject) => {
             let useTransitionDelay = false;
-            let _doneCallback: Function = () => {};
-            // call the cleanup
-            cleanup({
-              nextPath: route.value,
-              beginExitTransition: () => (useTransitionDelay = true),
-              endExitTransition: () => {
-                // trigger done state
-                _doneCallback(false);
-                resolve(true);
-              },
-              onExitTransitionDone: (
-                doneCallback: (aborted: boolean) => void
-              ) => {
-                _doneCallback = doneCallback;
 
+            const beginTransition = () => {
+              useTransitionDelay = true;
+              const finish = () => {
+                // trigger done state
+                resolve(true);
+              };
+              const onAbort = (handleAbort: () => void) => {
                 // setting up abort callback
                 const abort = () => {
                   hasAbortedCleanup = true;
                   // resolve the promise when aborting
                   resolve(false);
-                  doneCallback(true);
+                  handleAbort();
 
                   // remove the abort
                   const abortIndex = abortTransitionCallbacks.indexOf(abort);
                   abortTransitionCallbacks.splice(abortIndex, 1);
                 };
                 abortTransitionCallbacks.push(abort);
-              },
+              };
+              return {
+                finish: finish,
+                onAbort: onAbort,
+              };
+            };
+            // call the cleanup
+            cleanup({
+              nextPath: route.value,
+              beginTransition: beginTransition,
             });
 
             // resolve right away if the consumer of the api
@@ -100,6 +100,5 @@ export function createPageScriptExecutor(route: State<string>) {
     executeScript,
     cleanupExecutedScript,
     abortCleanup,
-    isPerformingCleanup,
   };
 }

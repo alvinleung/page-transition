@@ -15,17 +15,18 @@
       router.useScript(() => {
 
         console.log("loaded home");
-        return ({ beginExitTransition, endExitTransition, onExitTransitionDone }) => {
+        return ({ beginTransition }) => {
           console.log("exiting home");
-          beginExitTransition();
+
+          // once you begin transition, you have to tell it to stop
+          const { finish, onAbort } = beginTransition();
 
           let timeout = setTimeout(() => {
-            endExitTransition();
+            finish();
           }, 1000);
 
-          onExitTransitionDone((isAbort) => {
-            console.log("home transition done");
-            console.log("isAbort:" + isAbort);
+          onAbort(() => {
+            console.log("home transition aborted");
             clearTimeout(timeout);
           });
         };

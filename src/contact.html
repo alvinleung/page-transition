@@ -14,15 +14,16 @@
       console.log(fromRoute)
 
       console.log("loaded contact");
-      return ({ beginExitTransition, endExitTransition, onExitTransitionDone }) => {
+      return ({ beginTransition }) => {
         console.log("exiting contact");
-        beginExitTransition();
+
+        const { finish, onAbort } = beginTransition();
         let timeout = setTimeout(() => {
-          endExitTransition();
+          finish();
         }, 1000);
-        onExitTransitionDone((isAbort) => {
-          console.log("contact transition done");
-          console.log("isAbort:" + isAbort);
+
+        onAbort(() => {
+          console.log("contact transition aborted");
           clearTimeout(timeout);
         });
       };
