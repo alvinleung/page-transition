@@ -10,7 +10,9 @@
 
 <body>
   <script type="text/javascript" defer>
-    router.useScript(() => {
+    router.useScript((fromRoute) => {
+      console.log(fromRoute)
+
       console.log("loaded contact");
       return ({ beginExitTransition, endExitTransition, onExitTransitionDone }) => {
         console.log("exiting contact");

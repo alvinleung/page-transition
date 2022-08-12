@@ -6,7 +6,7 @@ import { createObserver, State, state } from "./util";
 
 type RouteChangeHandler = (newRoute: string, prevRoute: string) => void;
 
-const VERBOSE = true;
+const VERBOSE = false;
 
 interface RouterConfig {
   onLoadRoute?: (target: string) => void;
@@ -56,23 +56,12 @@ export function createRouter(routerConfig: RouterConfig): Router {
   
   */
 
-  const {
-    executeScript,
-    cleanupExecutedScript,
-    abortCleanup,
-    isPerformingCleanup,
-  } = createPageScriptExecutor(route);
+  const { executeScript, cleanupExecutedScript, abortCleanup } =
+    createPageScriptExecutor(route);
 
   route.onChange(async (newRoute) => {
-    // 1 - go back
-    // 2 - re-direct
-
-    // Abort all existing transition cleanup
-    // when user interrupt the transition
-    // if (isPerformingCleanup()) {
-    console.log("aborting cleanups");
+    VERBOSE && console.log("Aborting attempted cleanups");
     abortCleanup();
-    // }
 
     // if the user is going back to the original page,
     // skip the rest of cleanup process
@@ -84,8 +73,8 @@ export function createRouter(routerConfig: RouterConfig): Router {
     // set loaded state to false
     isRouteLoaded.set(false);
 
-    const success = await cleanupExecutedScript();
-    if (!success) {
+    const cleanupSuccess = await cleanupExecutedScript();
+    if (!cleanupSuccess) {
       VERBOSE && console.log(`Aborted ${newRoute}`);
       return;
     }
@@ -99,8 +88,11 @@ export function createRouter(routerConfig: RouterConfig): Router {
 
     // update the document
     swapBody(bodyHtml);
+
+    // update related state
     routePresented.set(newRoute);
     isRouteLoaded.set(true);
+
     VERBOSE && console.log(`Loaded new route`);
     // onRouteChange?.(newRoute, prevRoute);
   });

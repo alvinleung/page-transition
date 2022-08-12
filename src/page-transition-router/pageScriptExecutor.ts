@@ -23,7 +23,7 @@ export function createPageScriptExecutor(route: State<string>) {
    * @param script
    */
   function executeScript(script: PageScript) {
-    const cleanup = script();
+    const cleanup = script(route.prevValue);
     if (cleanup) pageScriptsCleanups.push(cleanup);
   }
 
