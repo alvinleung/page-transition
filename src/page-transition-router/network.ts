@@ -14,3 +14,11 @@ export async function loadPageAndCache(target: string) {
   }
   return false;
 }
+function routeToRelativeUrl(route: string) {
+  return route;
+}
+
+export async function loadHTML(routeString: string) {
+  const target = routeToRelativeUrl(routeString);
+  return await loadPageAndCache(target);
+}

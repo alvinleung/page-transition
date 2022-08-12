@@ -9,6 +9,8 @@
 </head>
 
 <body>
+
+
   <h1>Home</h1>
   <!-- use this to indicate n -->
   <nav id="nav" class="site-nav-persist">
@@ -101,7 +103,26 @@
       else he endures pains to avoid worse pains."
     </p>
   </div>
+  <script type="text/javascript">
+    router.useScript(() => {
 
+      console.log("loaded home");
+      return ({ beginExitTransition, endExitTransition, onExitTransitionDone }) => {
+        console.log("exiting home");
+        beginExitTransition();
+
+        let timeout = setTimeout(() => {
+          endExitTransition();
+        }, 1000);
+
+        onExitTransitionDone((isAbort) => {
+          console.log("home transition done");
+          console.log("isAbort:" + isAbort);
+          clearTimeout(timeout);
+        });
+      };
+    });
+  </script>
 </body>
 
 </html>

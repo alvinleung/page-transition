@@ -1,7 +1,12 @@
-import { loadPageAndCache } from "./pageCache";
-import { state } from "./util";
+import { interceptLinkClick } from "./interceptLinkClick";
+import { loadHTML, loadPageAndCache } from "./network";
+import { createPageScriptExecutor, PageScript } from "./pageScriptExecutor";
+import { swapBody } from "./DOMTransition";
+import { createObserver, State, state } from "./util";
 
 type RouteChangeHandler = (newRoute: string, prevRoute: string) => void;
+
+const VERBOSE = true;
 
 interface RouterConfig {
   onLoadRoute?: (target: string) => void;
@@ -17,172 +22,8 @@ export interface Router {
   unobservePageLoad: (callback: Function) => void;
   observePageUnload: (callback: Function) => void;
   unobservePageUnload: (callback: Function) => void;
-  useScript: (script: () => () => void) => void;
+  useScript: (script: PageScript) => void;
   cleanup: () => void;
-}
-
-function routeToRelativeUrl(route: string) {
-  return route;
-}
-
-/**
- * Intercept Link click
- * @param param0
- * @returns
- */
-function interceptLinkClick({ onClick = (link: string) => {} }) {
-  const grabAllLinks = () => document.querySelectorAll("a");
-
-  const links = state(
-    document.readyState === "interactive" ? grabAllLinks() : undefined
-  );
-
-  links.onChange((links, prevLinks) => {
-    if (!links) return;
-
-    if (prevLinks) {
-      // add remove all previous intercepts
-      prevLinks.forEach((link) =>
-        link.removeEventListener("click", handleLinkClick)
-      );
-    }
-
-    // add intercept
-    links.forEach((link) => link.addEventListener("click", handleLinkClick));
-
-    // prefetch all links
-    links.forEach((link) => loadPageAndCache(link.href));
-  });
-
-  // if not, then load it after the document is loaded
-  window.addEventListener("DOMContentLoaded", () => {
-    links.set(grabAllLinks());
-  });
-
-  function handleLinkClick(e: MouseEvent) {
-    e.preventDefault();
-    onClick((e.target as HTMLAnchorElement).href);
-  }
-
-  // cleanup and grab new links
-  const refreshLinkIntercepts = () => {
-    links.set(grabAllLinks());
-  };
-
-  return { links, refreshLinkIntercepts };
-}
-
-/**
- * fetchContent
- * @param routeString
- * @returns
- */
-async function loadHTML(routeString: string) {
-  const target = routeToRelativeUrl(routeString);
-  return await loadPageAndCache(target);
-}
-
-function swapBody(newBodyString: string) {
-  // attribute name of the "persist-id" to tag persistent element
-  const ATTR_PERSIST_ID = "persist-id";
-
-  const appendScript = (
-    baseElement: HTMLElement,
-    elm: HTMLScriptElement,
-    blockExecution = (src: string) => false
-  ) => {
-    const src = elm.attributes.getNamedItem("src")?.value as string;
-    if (src !== undefined && blockExecution(src)) {
-      return;
-    }
-
-    const newScript = document.createElement("script");
-    Array.from(elm.attributes).forEach((attr) => {
-      // prevent executing the current one
-      newScript.setAttribute(attr.name, attr.value);
-    });
-    newScript.appendChild(document.createTextNode(elm.innerHTML));
-    baseElement.appendChild(newScript);
-    return;
-  };
-
-  const appendNewContent = function (
-    baseElement: HTMLElement,
-    html: string,
-    blockExecution = (src: string) => false,
-    persistentElms: HTMLCollection
-  ) {
-    const persistentElmIdsLookup = (() => {
-      const idLookup = {};
-      Array.from(persistentElms).forEach((elm) => {
-        const persistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
-        idLookup[persistId] = elm;
-      });
-
-      return idLookup;
-    })();
-
-    const dummyContainer = document.createElement("div");
-    dummyContainer.innerHTML = html;
-
-    // add all elements from old html to new
-    Array.from(dummyContainer.children).forEach((elm) => {
-      if (elm.hasAttribute(ATTR_PERSIST_ID)) {
-        // do not replace when the new element already exist on dom
-        const elmPersistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
-        const existOnCurrentDOM = persistentElmIdsLookup[elmPersistId];
-        if (existOnCurrentDOM) return;
-      }
-
-      if (elm.tagName === "SCRIPT") {
-        appendScript(baseElement, elm as HTMLScriptElement, blockExecution);
-        return;
-      }
-
-      const clone = elm.cloneNode(true);
-      baseElement.appendChild(clone);
-    });
-  };
-
-  const blockJQueryAndWebflow = (src: string) => {
-    if (src.includes("webflow") || src.includes("jquery")) {
-      return true;
-    }
-    return false;
-  };
-
-  // use persist-id attribute to tag elements
-  // that are needed to persist across pages
-  const elmsToRemove = document.body.querySelectorAll(
-    `body > *:not([${ATTR_PERSIST_ID}])`
-  );
-  elmsToRemove.forEach((elm) => elm.remove());
-  const persistentElms = document.body.children;
-  appendNewContent(
-    document.body,
-    newBodyString,
-    blockJQueryAndWebflow,
-    persistentElms
-  );
-}
-
-type PageScript = () => () => void;
-function createPageScriptExecutor() {
-  let pageScriptsCleanups: (() => void)[] = [];
-
-  function executeScript(script: PageScript) {
-    const cleanup = script();
-    pageScriptsCleanups.push(cleanup);
-  }
-  function cleanupExecutedScript() {
-    pageScriptsCleanups.forEach((cleanup) => {
-      cleanup && cleanup();
-    });
-
-    pageScriptsCleanups = [];
-  }
-
-  return { executeScript, cleanupExecutedScript };
 }
 
 /**
@@ -192,7 +33,11 @@ function createPageScriptExecutor() {
  */
 export function createRouter(routerConfig: RouterConfig): Router {
   const { onLoadRoute, onUnloadRoute } = routerConfig;
-  const route = state("");
+
+  const initialRoute = window.location.href;
+  const route = state(initialRoute); // actual route
+  const routePresented = state(initialRoute); // how it is present on the screen
+
   const isRouteLoaded = state(false);
   const { refreshLinkIntercepts } = interceptLinkClick({
     onClick: (href) => {
@@ -201,17 +46,51 @@ export function createRouter(routerConfig: RouterConfig): Router {
     },
   });
 
-  const { executeScript, cleanupExecutedScript } = createPageScriptExecutor();
+  /*
+  
+  ----------------------------------------
 
-  // initial execution
-  // window.addEventListener("load", execuatePageScripts);
+  Handle Route Change
 
-  route.onChange(async (newRoute, prevRoute) => {
-    // call exit page
-    cleanupExecutedScript();
+  ----------------------------------------
+  
+  */
 
-    console.log(`Changing to ${newRoute}`);
+  const {
+    executeScript,
+    cleanupExecutedScript,
+    abortCleanup,
+    isPerformingCleanup,
+  } = createPageScriptExecutor(route);
+
+  route.onChange(async (newRoute) => {
+    // 1 - go back
+    // 2 - re-direct
+
+    // Abort all existing transition cleanup
+    // when user interrupt the transition
+    // if (isPerformingCleanup()) {
+    console.log("aborting cleanups");
+    abortCleanup();
+    // }
+
+    // if the user is going back to the original page,
+    // skip the rest of cleanup process
+    if (newRoute == routePresented.value) {
+      VERBOSE && console.log(`Go back to ${route.value}`);
+      return;
+    }
+
+    // set loaded state to false
     isRouteLoaded.set(false);
+
+    const success = await cleanupExecutedScript();
+    if (!success) {
+      VERBOSE && console.log(`Aborted ${newRoute}`);
+      return;
+    }
+
+    VERBOSE && console.log(`Change route to ${newRoute}`);
 
     const entirePageHTML = (await loadHTML(newRoute)) as string;
     const bodyHtml = /<body.*?>([\s\S]*)<\/body>/.exec(
@@ -220,14 +99,21 @@ export function createRouter(routerConfig: RouterConfig): Router {
 
     // update the document
     swapBody(bodyHtml);
+    routePresented.set(newRoute);
     isRouteLoaded.set(true);
+    VERBOSE && console.log(`Loaded new route`);
     // onRouteChange?.(newRoute, prevRoute);
   });
 
-  function useScript(script: () => () => void) {
-    // execute script when loaded
-    executeScript(script);
-  }
+  /*
+  
+  ----------------------------------------
+
+  Page Load and Unload Events
+
+  ----------------------------------------
+  
+  */
 
   const [observePageLoad, unobservePageLoad, firePageLoad] = createObserver();
   const [observePageUnload, unobservePageUnload, firePageUnload] =
@@ -248,6 +134,16 @@ export function createRouter(routerConfig: RouterConfig): Router {
     firePageUnload();
   });
 
+  /*
+  
+  ----------------------------------------
+
+  Page navigation Function
+
+  ----------------------------------------
+  
+  */
+
   function navigateTo(newRoute: string) {
     // save route to browser state
     window.history.pushState({}, "", newRoute);
@@ -266,7 +162,7 @@ export function createRouter(routerConfig: RouterConfig): Router {
 
   return {
     navigateTo: navigateTo,
-    useScript: useScript,
+    useScript: executeScript,
     observeRouteChange: (callback: RouteChangeHandler) =>
       route.onChange(callback),
     unobserveRouteChange: (callback: RouteChangeHandler) =>
@@ -278,23 +174,4 @@ export function createRouter(routerConfig: RouterConfig): Router {
     cleanup: cleanup,
     getCurrentRoute: () => route.value,
   };
-}
-
-function createObserver(): [
-  (callback: Function) => void,
-  (callback: Function) => void,
-  () => void
-] {
-  const callbacks: Function[] = [];
-  const observe = (callback: Function) => {
-    callbacks.push(callback);
-  };
-  const unobserve = (callback: Function) => {
-    const removeIndex = callbacks.indexOf(callback);
-    removeIndex !== -1 && callbacks.splice(removeIndex);
-  };
-  function fire() {
-    callbacks.forEach((callback) => callback());
-  }
-  return [observe, unobserve, fire];
 }

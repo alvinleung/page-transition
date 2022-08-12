@@ -9,6 +9,23 @@
 </head>
 
 <body>
+  <script type="text/javascript" defer>
+    router.useScript(() => {
+      console.log("loaded about");
+      return ({ beginExitTransition, endExitTransition, onExitTransitionDone }) => {
+        console.log("exiting about");
+        beginExitTransition();
+        let timeout = setTimeout(() => {
+          endExitTransition();
+        }, 1000);
+        onExitTransitionDone((isAbort) => {
+          console.log("about transition done");
+          console.log("isAbort:" + isAbort);
+          clearTimeout(timeout);
+        });
+      };
+    });
+  </script>
   <h1>About</h1>
   <!-- use this to indicate n -->
   <nav id="nav" class="site-nav-persist">

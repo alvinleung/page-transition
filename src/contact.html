@@ -9,6 +9,23 @@
 </head>
 
 <body>
+  <script type="text/javascript" defer>
+    router.useScript(() => {
+      console.log("loaded contact");
+      return ({ beginExitTransition, endExitTransition, onExitTransitionDone }) => {
+        console.log("exiting contact");
+        beginExitTransition();
+        let timeout = setTimeout(() => {
+          endExitTransition();
+        }, 1000);
+        onExitTransitionDone((isAbort) => {
+          console.log("contact transition done");
+          console.log("isAbort:" + isAbort);
+          clearTimeout(timeout);
+        });
+      };
+    });
+  </script>
   <h1>Contact</h1>
   <!-- use this to indicate n -->
   <nav id="nav" class="site-nav-persist">
