@@ -98,7 +98,7 @@ export function swapBody(newBodyString: string) {
       const persistElm = elm as HTMLElement;
       // let the element stay if it declared permanace
       if (persistElm.getAttribute(ATTR_PERSIST_PERMANENT) !== "true")
-        document.removeChild(persistElm);
+        baseElement.removeChild(persistElm);
     })
 
   };
