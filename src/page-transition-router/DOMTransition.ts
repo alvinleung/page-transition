@@ -9,6 +9,7 @@ import { loadPageAndCache } from "./network";
 export function swapBody(newBodyString: string) {
   // attribute name of the "persist-id" to tag persistent element
   const ATTR_PERSIST_ID = "persist-id";
+  const ATTR_PERSIST_PERMANENT = "persist-permanent";
 
   const appendScript = (
     baseElement: HTMLElement,
@@ -30,31 +31,54 @@ export function swapBody(newBodyString: string) {
     return;
   };
 
+  const createReadOnceLookup = <T>() => {
+
+    type Lookup = {
+      [key: string]: T
+    }
+
+    const lookup: Lookup = {}
+
+    return {
+      add: (key: string, value: T) => {
+        lookup[key] = value;
+      },
+      readAndDelete: (key: string) => {
+        const value = lookup[key];
+        delete lookup[key];
+        return value;
+      },
+      getUnread: () => lookup
+    }
+  }
+
   const appendNewContent = function (
     baseElement: HTMLElement,
     html: string,
     blockExecution = (src: string) => false,
     persistentElms: HTMLCollection
   ) {
+
     const persistentElmIdsLookup = (() => {
-      const idLookup = {};
+      const idLookup = createReadOnceLookup();
       Array.from(persistentElms).forEach((elm) => {
         const persistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
-        idLookup[persistId] = elm;
+        idLookup.add(persistId, elm);
       });
 
-      return idLookup;
+      return idLookup
     })();
 
     const dummyContainer = document.createElement("div");
     dummyContainer.innerHTML = html;
+
 
     // add all elements from old html to new
     Array.from(dummyContainer.children).forEach((elm) => {
       if (elm.hasAttribute(ATTR_PERSIST_ID)) {
         // do not replace when the new element already exist on dom
         const elmPersistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
-        const existOnCurrentDOM = persistentElmIdsLookup[elmPersistId];
+        const existOnCurrentDOM = persistentElmIdsLookup.readAndDelete(elmPersistId);
         if (existOnCurrentDOM) return;
       }
 
@@ -66,7 +90,19 @@ export function swapBody(newBodyString: string) {
       const clone = elm.cloneNode(true);
       baseElement.appendChild(clone);
     });
+
+
+    // remove persist elements that are not on the new page
+    const persistElmsToRemove = persistentElmIdsLookup.getUnread();
+    Object.values(persistElmsToRemove).forEach((elm) => {
+      const persistElm = elm as HTMLElement;
+      // let the element stay if it declared permanace
+      if (persistElm.getAttribute(ATTR_PERSIST_PERMANENT) !== "true")
+        document.removeChild(persistElm);
+    })
+
   };
+
 
   const blockJQueryAndWebflow = (src: string) => {
     if (src.includes("webflow") || src.includes("jquery")) {
@@ -80,7 +116,9 @@ export function swapBody(newBodyString: string) {
   const elmsToRemove = document.body.querySelectorAll(
     `body > *:not([${ATTR_PERSIST_ID}])`
   );
-  elmsToRemove.forEach((elm) => elm.remove());
+  elmsToRemove.forEach((elm) => {
+    elm.remove();
+  });
   const persistentElms = document.body.children;
   appendNewContent(
     document.body,
