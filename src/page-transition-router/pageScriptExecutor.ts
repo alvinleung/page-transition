@@ -26,12 +26,12 @@ export function createPageScriptExecutor(route: State<string>) {
       if (cleanup) pageScriptsCleanups.push(cleanup);
     };
     // don't invoke right away, only invoke when the document is loaded
-    if (document.readyState !== "complete") {
-      window.addEventListener("load", () => {
-        invoke();
-      });
-      return;
-    }
+    // if (document.readyState !== "complete") {
+    //   window.addEventListener("load", () => {
+    //     invoke();
+    //   });
+    //   return;
+    // }
     invoke();
   }
 
