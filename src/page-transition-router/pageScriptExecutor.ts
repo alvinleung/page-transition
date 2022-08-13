@@ -21,8 +21,18 @@ export function createPageScriptExecutor(route: State<string>) {
    * @param script
    */
   function executeScript(script: PageScript) {
-    const cleanup = script(route.prevValue);
-    if (cleanup) pageScriptsCleanups.push(cleanup);
+    const invoke = () => {
+      const cleanup = script(route.prevValue);
+      if (cleanup) pageScriptsCleanups.push(cleanup);
+    };
+    // don't invoke right away, only invoke when the document is loaded
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", () => {
+        invoke();
+      });
+      return;
+    }
+    invoke();
   }
 
   let abortTransitionCallbacks: Function[] = [];
