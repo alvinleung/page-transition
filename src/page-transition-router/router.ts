@@ -23,6 +23,7 @@ export interface Router {
   observePageUnload: (callback: Function) => void;
   unobservePageUnload: (callback: Function) => void;
   useScript: (script: PageScript) => void;
+  refershHrefTargets: () => void;
   cleanup: () => void;
 }
 
@@ -163,6 +164,7 @@ export function createRouter(routerConfig: RouterConfig): Router {
     unobservePageLoad: unobservePageLoad,
     observePageUnload: observePageUnload,
     unobservePageUnload: unobservePageUnload,
+    refershHrefTargets: refreshLinkIntercepts,
     cleanup: cleanup,
     getCurrentRoute: () => route.value,
   };
