@@ -16,9 +16,8 @@ export function interceptLinkClick({ onClick = (link: string) => { } }) {
   const handleIntersection = (entries: IntersectionObserverEntry[]) => {
     entries.forEach((entry) => {
       const targetLink = entry.target as HTMLAnchorElement;
-      console.log(entry)
       if (entry.isIntersecting) {
-        if (targetLink.hasAttribute("prefetched")) {
+        if (!targetLink.hasAttribute("prefetched")) {
           loadPageAndCache(targetLink.href);
           targetLink.setAttribute("prefetched", "true");
         }
