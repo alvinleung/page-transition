@@ -6,15 +6,31 @@ import { state } from "./util";
  * @param param0
  * @returns
  */
-export function interceptLinkClick({ onClick = (link: string) => {} }) {
+export function interceptLinkClick({ onClick = (link: string) => { } }) {
   const grabAllLinks = () => document.querySelectorAll("a");
 
   const links = state(
     document.readyState === "interactive" ? grabAllLinks() : undefined
   );
 
+  const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+    entries.forEach((entry) => {
+      const targetLink = entry.target as HTMLAnchorElement;
+      console.log(entry)
+      if (entry.isIntersecting) {
+        if (targetLink.hasAttribute("prefetched")) {
+          loadPageAndCache(targetLink.href);
+          targetLink.setAttribute("prefetched", "true");
+        }
+      }
+    })
+  }
+  let linkObserver: IntersectionObserver = new IntersectionObserver(handleIntersection);
   links.onChange((links, prevLinks) => {
     if (!links) return;
+
+    // clear all observer links if there is a observer here
+    if (linkObserver) linkObserver.disconnect();
 
     if (prevLinks) {
       // add remove all previous intercepts
@@ -26,8 +42,10 @@ export function interceptLinkClick({ onClick = (link: string) => {} }) {
     // add intercept
     links.forEach((link) => link.addEventListener("click", handleLinkClick));
 
-    // prefetch all links
-    links.forEach((link) => loadPageAndCache(link.href));
+    // prefetch all links that is on screen
+    links.forEach((link) => {
+      linkObserver.observe(link);
+    });
   });
 
   // if not, then load it after the document is loaded
