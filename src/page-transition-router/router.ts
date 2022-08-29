@@ -86,9 +86,12 @@ export function createRouter(routerConfig: RouterConfig): Router {
     const bodyHtml = /<body.*?>([\s\S]*)<\/body>/.exec(
       entirePageHTML
     )?.[1] as string;
+    const documentTitle = /<title.*?>([\s\S]*)<\/title>/.exec(
+      entirePageHTML
+    )?.[1] as string;
 
     // update the document
-    swapBody(bodyHtml);
+    swapBody(bodyHtml, documentTitle);
 
     // update related state
     routePresented.set(newRoute);

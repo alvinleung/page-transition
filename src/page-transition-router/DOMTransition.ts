@@ -6,7 +6,7 @@ import { loadPageAndCache } from "./network";
  * @returns
  */
 
-export function swapBody(newBodyString: string) {
+export function swapBody(newBodyString: string, documentTitle: string) {
   // attribute name of the "persist-id" to tag persistent element
   const ATTR_PERSIST_ID = "persist-id";
   const ATTR_PERSIST_PERMANENT = "persist-permanent";
@@ -32,12 +32,11 @@ export function swapBody(newBodyString: string) {
   };
 
   const createReadOnceLookup = <T>() => {
-
     type Lookup = {
-      [key: string]: T
-    }
+      [key: string]: T;
+    };
 
-    const lookup: Lookup = {}
+    const lookup: Lookup = {};
 
     return {
       add: (key: string, value: T) => {
@@ -48,9 +47,9 @@ export function swapBody(newBodyString: string) {
         delete lookup[key];
         return value;
       },
-      getUnread: () => lookup
-    }
-  }
+      getUnread: () => lookup,
+    };
+  };
 
   const appendNewContent = function (
     baseElement: HTMLElement,
@@ -58,7 +57,6 @@ export function swapBody(newBodyString: string) {
     blockExecution = (src: string) => false,
     persistentElms: HTMLCollection
   ) {
-
     const persistentElmIdsLookup = (() => {
       const idLookup = createReadOnceLookup();
       Array.from(persistentElms).forEach((elm) => {
@@ -66,19 +64,19 @@ export function swapBody(newBodyString: string) {
         idLookup.add(persistId, elm);
       });
 
-      return idLookup
+      return idLookup;
     })();
 
     const dummyContainer = document.createElement("div");
     dummyContainer.innerHTML = html;
-
 
     // add all elements from old html to new
     Array.from(dummyContainer.children).forEach((elm) => {
       if (elm.hasAttribute(ATTR_PERSIST_ID)) {
         // do not replace when the new element already exist on dom
         const elmPersistId = elm.getAttribute(ATTR_PERSIST_ID) as string;
-        const existOnCurrentDOM = persistentElmIdsLookup.readAndDelete(elmPersistId);
+        const existOnCurrentDOM =
+          persistentElmIdsLookup.readAndDelete(elmPersistId);
         if (existOnCurrentDOM) return;
       }
 
@@ -91,7 +89,6 @@ export function swapBody(newBodyString: string) {
       baseElement.appendChild(clone);
     });
 
-
     // remove persist elements that are not on the new page
     const persistElmsToRemove = persistentElmIdsLookup.getUnread();
     Object.values(persistElmsToRemove).forEach((elm) => {
@@ -99,10 +96,8 @@ export function swapBody(newBodyString: string) {
       // let the element stay if it declared permanace
       if (persistElm.getAttribute(ATTR_PERSIST_PERMANENT) !== "true")
         baseElement.removeChild(persistElm);
-    })
-
+    });
   };
-
 
   const blockJQueryAndWebflow = (src: string) => {
     if (src.includes("webflow") || src.includes("jquery")) {
