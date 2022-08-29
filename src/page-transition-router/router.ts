@@ -142,7 +142,7 @@ export function createRouter(routerConfig: RouterConfig): Router {
 
   function navigateTo(newRoute: string) {
     // save route to browser state
-    window.history.pushState({}, "", newRoute);
+    if (newRoute !== route.value) window.history.pushState({}, "", newRoute);
     // go back
     route.set(newRoute);
   }
