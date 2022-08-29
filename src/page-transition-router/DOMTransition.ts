@@ -121,4 +121,5 @@ export function swapBody(newBodyString: string, documentTitle: string) {
     blockJQueryAndWebflow,
     persistentElms
   );
+  document.title = documentTitle;
 }
