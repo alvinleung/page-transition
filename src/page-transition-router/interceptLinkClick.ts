@@ -1,12 +1,18 @@
 import { loadPageAndCache } from "./network";
 import { state } from "./util";
 
+const isExternalLink = (url) => {
+  const tmp = document.createElement("a");
+  tmp.href = url;
+  return tmp.host !== window.location.host;
+};
+
 /**
  * Intercept Link click
  * @param param0
  * @returns
  */
-export function interceptLinkClick({ onClick = (link: string) => { } }) {
+export function interceptLinkClick({ onClick = (link: string) => {} }) {
   const grabAllLinks = () => document.querySelectorAll("a");
 
   const links = state(
@@ -22,17 +28,19 @@ export function interceptLinkClick({ onClick = (link: string) => { } }) {
           targetLink.setAttribute("prefetched", "true");
         }
       }
-    })
-  }
-  let linkObserver: IntersectionObserver = new IntersectionObserver(handleIntersection);
+    });
+  };
+  let linkObserver: IntersectionObserver = new IntersectionObserver(
+    handleIntersection
+  );
   links.onChange((links, prevLinks) => {
     if (!links) return;
 
     // clear all observer links if there is a observer here
     if (linkObserver) linkObserver.disconnect();
 
+    // add remove all previous intercepts
     if (prevLinks) {
-      // add remove all previous intercepts
       prevLinks.forEach((link) =>
         link.removeEventListener("click", handleLinkClick)
       );
@@ -53,8 +61,11 @@ export function interceptLinkClick({ onClick = (link: string) => { } }) {
   });
 
   function handleLinkClick(e: MouseEvent) {
+    const href = (e.target as HTMLAnchorElement).href;
+    if (isExternalLink(href)) return;
+
     e.preventDefault();
-    onClick((e.target as HTMLAnchorElement).href);
+    onClick(href);
   }
 
   // cleanup and grab new links
